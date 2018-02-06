@@ -1,0 +1,86 @@
+import sys,getopt,requests,time
+
+headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+
+def help():
+    print("--username")
+    print("--password")
+    print("--template")
+    print("-h")
+    sys.exit(2)
+
+def getMyIp():
+    try:
+        r = requests.get('http://ifconfig.me/ip',timeout=10,headers=headers)
+    except requests.exceptions.RequestException:
+        print('get ip address timeout')
+        return getMyIp()
+
+    if r.status_code == requests.codes.ok:
+        return r.text.replace('\n','')
+    else:
+        print(r.text)
+        sys.exit(2)
+
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv,"h",["help","hostname=","username=","password=","template="])
+    except getopt.GetoptError:
+        print('Arguments parsing error')
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ("-h","--help"):
+            help()
+        elif opt in ("","--hostname"):
+            hostname = arg
+        elif opt in ("","--username"):
+            username = arg
+        elif opt in ("","--password"):
+            password = arg
+        elif opt in ("","--template"):
+            template = arg
+
+    if 'hostname' not in locals():
+        print('Hostname is required')
+        sys.exit(2)
+    if 'username' not in locals():
+        print('Username is required')
+        sys.exit(2)
+    if 'password' not in locals():
+        print('Password is required')
+        sys.exit(2)
+    if 'template' not in locals():
+        print('Template is required')
+        sys.exit(2)
+
+    print('template string: ',template)
+    print()
+    template = template.replace('__HOSTNAME__','%(hostname) s')
+    template = template.replace('__USERNAME__','%(username) s')
+    template = template.replace('__PASSWORD__','%(password) s')
+    template = template.replace('__MYIP__','%(myip) s')
+
+    while 1:
+        ip = getMyIp()
+        print('public ip address is : ',ip)
+        print()
+
+        url = template%{'hostname': hostname,'username': username, 'password':password,'myip':ip}
+        print(url)
+
+        try:
+            r = requests.get(url,timeout=10,headers=headers)
+            print('>> ',r.text)
+            print()
+        except requests.exceptions.RequestException:
+            print('>> ','update ip address timeout')
+            print()
+            continue
+
+        print('wait 300s to keep on')
+        print()
+        time.sleep(300)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
